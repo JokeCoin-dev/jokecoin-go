@@ -5,30 +5,31 @@ import (
 	"log"
 )
 
-var ldb *leveldb.DB
+type LevelDB struct {
+	db *leveldb.DB
+}
 
-func initLevelDB(path string) *leveldb.DB {
-	if ldb != nil {
-		log.Panicln("LevelDB already initialized")
+func (l *LevelDB) Put(key []byte, value []byte) error {
+	return l.db.Put(key, value, nil)
+}
+
+func (l *LevelDB) Get(key []byte) ([]byte, error) {
+	return l.db.Get(key, nil)
+}
+
+func (l *LevelDB) Close() error {
+	return l.db.Close()
+}
+
+func InitLevelDB(path string) error {
+	if db != nil {
+		log.Panicln("Database already initialized")
 	}
 	var err error
-	ldb, err = leveldb.OpenFile(path, nil)
+	ldb, err := leveldb.OpenFile(path, nil)
 	if err != nil {
-		log.Panicln(err)
+		return err
 	}
-	return ldb
-}
-func closeLevelDB() {
-	if ldb == nil {
-		log.Panicln("DB is not initialized")
-		return
-	}
-	err := ldb.Close()
-	if err != nil {
-		log.Panicln(err)
-	}
-}
-
-func getLevelDB() *leveldb.DB {
-	return ldb
+	db = &LevelDB{db: ldb}
+	return nil
 }

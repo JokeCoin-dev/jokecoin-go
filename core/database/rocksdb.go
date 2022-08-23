@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/linxGnu/grocksdb"
+	"log"
 )
 
 type RocksDB struct {
@@ -29,11 +30,15 @@ func (r *RocksDB) Get(key []byte) ([]byte, error) {
 	return res, nil
 }
 
-func (r *RocksDB) Close() {
+func (r *RocksDB) Close() error {
 	r.db.Close()
+	return nil
 }
 
 func InitRocksDB(path string) error {
+	if db != nil {
+		log.Panicln("Database already initialized")
+	}
 	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(grocksdb.NewLRUCache(3 << 30))
 

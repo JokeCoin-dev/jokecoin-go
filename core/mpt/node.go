@@ -1,7 +1,6 @@
 package mpt
 
 import (
-	"encoding/gob"
 	"golang.org/x/crypto/sha3"
 	"jokecoin-go/core/common"
 	"jokecoin-go/core/database"
@@ -19,29 +18,12 @@ const (
 
 const BranchSize = 16
 
-type LeafNode struct {
-	Path  []Nibble
-	Value []byte
-}
-
-type BranchNode struct {
-	Branches [BranchSize]common.Hash
-}
-
-type ExtensionNode struct {
-	Path []Nibble
-	Next common.Hash
-}
-
-type Node interface {
-	GetHash() common.Hash
-	WriteDB() (common.Hash, error)
-}
-
-func init() {
-	gob.Register(LeafNode{})
-	gob.Register(BranchNode{})
-	gob.Register(ExtensionNode{})
+type Node struct {
+	Type     NodeType
+	Path     []Nibble      // Leaf & Extension
+	Value    []byte        //Leaf
+	Branches []common.Hash //Branch
+	Next     common.Hash   //Extension
 }
 
 /*func (n EncodedNode) GetHash() common.Hash {
@@ -79,63 +61,37 @@ func CreateENode(child interface{}) (common.Hash, error) {
 	return enode.GetHash(), nil
 }*/
 
-func (n LeafNode) GetHash() common.Hash {
+func (n Node) GetHash() common.Hash {
 	b, err := utils.Serialize(n)
 	utils.PanicIfErr(err)
 	return sha3.Sum256(b)
 }
 
-func (n LeafNode) WriteDB() (common.Hash, error) {
+func (n Node) WriteDB() (common.Hash, error) {
 	db := database.GetDB()
 	hash := n.GetHash()
-	t := Node(n)
-	err := db.Put(hash[:], utils.MustSerialize(&t))
+	err := db.Put(hash[:], utils.MustSerialize(n))
 	if err != nil {
 		return common.EmptyHash, errors.Wrap(err, errors.DatabaseError)
 	} else {
 		return hash, nil
 	}
 }
-func NewBranch() BranchNode {
-	b := BranchNode{}
+func NewBranch() *Node {
+	b := &Node{Type: TypeBranch}
+	b.Branches = make([]common.Hash, BranchSize)
 	for i := 0; i < BranchSize; i++ {
 		b.Branches[i] = common.EmptyHash
 	}
 	return b
 }
 
-func (n BranchNode) GetHash() common.Hash {
-	b, err := utils.Serialize(n)
-	utils.PanicIfErr(err)
-	return sha3.Sum256(b)
+func NewLeaf(path []Nibble, value []byte) *Node {
+	n := &Node{Type: TypeLeaf, Path: path, Value: value}
+	return n
 }
 
-func (n BranchNode) WriteDB() (common.Hash, error) {
-	db := database.GetDB()
-	hash := n.GetHash()
-	t := Node(n)
-	err := db.Put(hash[:], utils.MustSerialize(&t))
-	if err != nil {
-		return common.EmptyHash, errors.Wrap(err, errors.DatabaseError)
-	} else {
-		return hash, nil
-	}
-}
-
-func (n ExtensionNode) GetHash() common.Hash {
-	b, err := utils.Serialize(n)
-	utils.PanicIfErr(err)
-	return sha3.Sum256(b)
-}
-
-func (n ExtensionNode) WriteDB() (common.Hash, error) {
-	db := database.GetDB()
-	hash := n.GetHash()
-	t := Node(n)
-	err := db.Put(hash[:], utils.MustSerialize(&t))
-	if err != nil {
-		return common.EmptyHash, errors.Wrap(err, errors.DatabaseError)
-	} else {
-		return hash, nil
-	}
+func NewExtension(path []Nibble, next common.Hash) *Node {
+	n := &Node{Type: TypeExtension, Path: path, Next: next}
+	return n
 }

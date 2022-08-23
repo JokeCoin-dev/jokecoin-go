@@ -36,26 +36,31 @@ func (t MerklePatriciaTrie) Get(key []byte) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, errors.DataConsistencyError)
 		}
-		if leaf, ok := inode.(LeafNode); ok {
+		if inode.Type == TypeLeaf {
+			leaf := &inode
 			matched := PrefixMatchedLen(nibbles, leaf.Path)
 			if matched != len(leaf.Path) || matched != len(nibbles) {
 				return nil, nil
 			}
 			return leaf.Value, nil
-		} else if branch, ok := inode.(BranchNode); ok {
+		} else if inode.Type == TypeBranch {
+			branch := &inode
 			if len(nibbles) == 0 {
 				return nil, errors.New(errors.DataConsistencyError)
 			}
 			b, remaining := nibbles[0], nibbles[1:]
 			nibbles = remaining
 			node = branch.Branches[b]
-		} else if ext, ok := inode.(ExtensionNode); ok {
+		} else if inode.Type == TypeExtension {
+			ext := &inode
 			matched := PrefixMatchedLen(ext.Path, nibbles)
 			if matched < len(ext.Path) {
 				return nil, errors.New(errors.DataConsistencyError)
 			}
 			nibbles = nibbles[matched:]
 			node = ext.Next
+		} else {
+			return nil, errors.New(errors.DataConsistencyError)
 		}
 	}
 }
@@ -73,7 +78,7 @@ func put(node common.Hash, key []Nibble, value []byte) (common.Hash, error) {
 	nibbles := key
 	db := database.GetDB()
 	if node == common.EmptyHash {
-		leaf := LeafNode{Path: nibbles, Value: value}
+		leaf := NewLeaf(nibbles, value)
 		return leaf.WriteDB()
 	} else {
 		b, err := db.Get(node[:])
@@ -85,23 +90,24 @@ func put(node common.Hash, key []Nibble, value []byte) (common.Hash, error) {
 		if err != nil {
 			return common.EmptyHash, errors.Wrap(err, errors.DataConsistencyError)
 		}
-		if leaf, ok := inode.(LeafNode); ok {
+		if inode.Type == TypeLeaf {
+			leaf := &inode
 			if len(leaf.Path) != len(nibbles) {
 				return common.EmptyHash, errors.New(errors.DataConsistencyError)
 			}
 			matched := PrefixMatchedLen(leaf.Path, nibbles)
 			if matched == len(nibbles) {
-				leaf := LeafNode{Path: nibbles, Value: value}
+				leaf := NewLeaf(nibbles, value)
 				return leaf.WriteDB()
 			} else {
 				branch := NewBranch()
-				leaf1 := LeafNode{leaf.Path[matched+1:], leaf.Value}
+				leaf1 := NewLeaf(leaf.Path[matched+1:], leaf.Value)
 				hash1, err := leaf1.WriteDB()
 				if err != nil {
 					return common.EmptyHash, err
 				}
 				branch.Branches[leaf.Path[matched]] = hash1
-				leaf2 := LeafNode{nibbles[matched+1:], value}
+				leaf2 := NewLeaf(nibbles[matched+1:], value)
 				hash2, err := leaf2.WriteDB()
 				if err != nil {
 					return common.EmptyHash, err
@@ -112,13 +118,14 @@ func put(node common.Hash, key []Nibble, value []byte) (common.Hash, error) {
 					return common.EmptyHash, err
 				}
 				if matched > 0 {
-					ext := ExtensionNode{leaf.Path[:matched], hashBranch}
+					ext := NewExtension(leaf.Path[:matched], hashBranch)
 					return ext.WriteDB()
 				} else {
 					return hashBranch, nil
 				}
 			}
-		} else if branch, ok := inode.(BranchNode); ok {
+		} else if inode.Type == TypeBranch {
+			branch := &inode
 			b, remaining := nibbles[0], nibbles[1:]
 			newNode, err := put(branch.Branches[b], remaining, value)
 			if err != nil {
@@ -126,7 +133,8 @@ func put(node common.Hash, key []Nibble, value []byte) (common.Hash, error) {
 			}
 			branch.Branches[b] = newNode
 			return branch.WriteDB()
-		} else if ext, ok := inode.(ExtensionNode); ok {
+		} else if inode.Type == TypeExtension {
+			ext := &inode
 			matched := PrefixMatchedLen(ext.Path, nibbles)
 			if len(ext.Path) >= len(nibbles) {
 				return common.EmptyHash, errors.New(errors.DataConsistencyError)
@@ -138,14 +146,14 @@ func put(node common.Hash, key []Nibble, value []byte) (common.Hash, error) {
 				if len(extRemainingnibbles) == 0 {
 					branch.Branches[branchNibble] = ext.Next
 				} else {
-					newExt := ExtensionNode{extRemainingnibbles, ext.Next}
+					newExt := NewExtension(extRemainingnibbles, ext.Next)
 					hash, err := newExt.WriteDB()
 					if err != nil {
 						return common.EmptyHash, err
 					}
 					branch.Branches[branchNibble] = hash
 				}
-				leaf := LeafNode{nodeLeafNibbles, value}
+				leaf := NewLeaf(nodeLeafNibbles, value)
 				enodeLeaf, err := leaf.WriteDB()
 				if err != nil {
 					return common.EmptyHash, err
@@ -158,7 +166,7 @@ func put(node common.Hash, key []Nibble, value []byte) (common.Hash, error) {
 				if len(extNibbles) == 0 {
 					return hashBranch, nil
 				} else {
-					newExt := ExtensionNode{extNibbles, hashBranch}
+					newExt := NewExtension(extNibbles, hashBranch)
 					return newExt.WriteDB()
 				}
 			} else {

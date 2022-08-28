@@ -6,16 +6,18 @@ import (
 	"jokecoin-go/core/utils"
 )
 
+// Transaction represents a transaction
+// TxType: 1 - normal TX, 2 - creating block TX
 type Transaction struct {
-	TxType          int64
-	SenderPublicKey common.PublicKey
-	SenderSignature common.Signature
-	Receiver        common.Address
-	Value           int64
-	GasLimit        int64
-	Fee             int64
-	Nonce           int64
-	Data            []byte
+	TxType          int64            `json:"tx_type"`
+	SenderPublicKey common.PublicKey `json:"sender_public_key"`
+	SenderSignature common.Signature `json:"sender_signature"`
+	Receiver        common.Address   `json:"receiver"`
+	Value           int64            `json:"value"`
+	GasLimit        int64            `json:"gas_limit"`
+	Fee             int64            `json:"fee"`
+	Nonce           int64            `json:"nonce"`
+	Data            []byte           `json:"data"`
 }
 
 func (tx Transaction) Encode() []byte {

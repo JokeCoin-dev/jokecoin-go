@@ -22,3 +22,7 @@ type Signature [SignatureLen]byte
 func init() {
 	EmptyHash = sha3.Sum256([]byte(""))
 }
+
+func ToHash(b []byte) Hash {
+	return *(*Hash)(b)
+}

@@ -36,3 +36,8 @@ func MustSerialize(v interface{}) []byte {
 	PanicIfErr(err)
 	return b
 }
+
+func MustDeserialize(b []byte, v interface{}) {
+	err := Deserialize(b, v)
+	PanicIfErr(err)
+}

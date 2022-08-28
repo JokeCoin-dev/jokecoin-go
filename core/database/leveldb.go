@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/syndtr/goleveldb/leveldb"
+	"jokecoin-go/core/errors"
 	"log"
 )
 
@@ -13,8 +14,27 @@ func (l *LevelDB) Put(key []byte, value []byte) error {
 	return l.db.Put(key, value, nil)
 }
 
+func (l *LevelDB) MustPut(key []byte, value []byte) {
+	err := l.Put(key, value)
+	if err != nil {
+		log.Panicf("Database error: %v\n", err)
+	}
+}
+
 func (l *LevelDB) Get(key []byte) ([]byte, error) {
-	return l.db.Get(key, nil)
+	v, err := l.db.Get(key, nil)
+	if errors.Is(err, leveldb.ErrNotFound) {
+		return nil, nil
+	}
+	return v, err
+}
+
+func (l *LevelDB) MustGet(key []byte) []byte {
+	value, err := l.Get(key)
+	if err != nil {
+		log.Panicf("Database error: %v\n", err)
+	}
+	return value
 }
 
 func (l *LevelDB) Close() error {

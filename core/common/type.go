@@ -15,14 +15,8 @@ var EmptyHash Hash
 
 type Hash [HashLen]byte
 type Address [AddressLen]byte
-type PublicKey [PublicKeyLen]byte
-type PrivateKey [PrivateKeyLen]byte
 type Signature [SignatureLen]byte
 
 func init() {
 	EmptyHash = sha3.Sum256([]byte(""))
-}
-
-func ToHash(b []byte) Hash {
-	return *(*Hash)(b)
 }

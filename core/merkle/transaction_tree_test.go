@@ -1,6 +1,7 @@
 package merkle
 
 import (
+	"crypto/ed25519"
 	"golang.org/x/crypto/sha3"
 	"jokecoin-go/core/block"
 	"jokecoin-go/core/common"
@@ -10,10 +11,10 @@ import (
 )
 
 func TestBuildTransactionTree(t *testing.T) {
-	database.InitLevelDB("test_db")
+	utils.PanicIfErr(database.InitLevelDB("test_leveldb"))
 	TX := block.Transaction{
 		TxType:          0,
-		SenderPublicKey: common.PublicKey{},
+		SenderPublicKey: ed25519.PublicKey{},
 		SenderSignature: common.Signature{},
 		Receiver:        common.Address{},
 		Value:           0,
@@ -34,7 +35,7 @@ func TestBuildTransactionTree(t *testing.T) {
 	h := TXs[0].ComputeHash()
 	h2 := sha3.Sum256(h[:])
 	for i := 1; i <= 5; i++ {
-		b, err := db.Get(h2[:], nil)
+		b, err := db.Get(h2[:])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -46,5 +47,5 @@ func TestBuildTransactionTree(t *testing.T) {
 		h2 = x.Parent
 	}
 	utils.Assert(h2 == EmptyTree)
-	database.CloseDB()
+	utils.PanicIfErr(db.Close())
 }

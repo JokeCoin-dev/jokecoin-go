@@ -53,6 +53,14 @@ func New(description *description) error {
 	}
 }
 
+func NewMsg(message string) error {
+	return &userErrorImpl{
+		description: createDescription(message),
+		err:         errors.New(message),
+		time:        time.Now(),
+	}
+}
+
 // Wrap 传入一个err, 返回一个通过ErrorDescription包装的Error
 // Wrap 也会记录堆栈信息
 // err 原始error

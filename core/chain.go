@@ -60,3 +60,28 @@ func LoadChain(cfg config.NodeConfig, gcfg config.NodeGlobalConfig) *Chain {
 	log.Printf("Chain loaded, highest block height: %d", highestBlock.Header.Height)
 	return cn
 }
+
+func (cn *Chain) InsertBlock(b *block.Block) error {
+	if b.Header.Height == 0 {
+		// Cannot insert genesis block
+		return errors.New(errors.DataConsistencyError)
+	}
+	if b.Header.ParentHash == cn.HighestChain[len(cn.HighestChain)-1].Header.ComputeHash() {
+		// This block is the son of the highest block
+		err := b.WriteDB()
+		if err != nil {
+			return err
+		}
+		return cn.ExtendHighestChain(b)
+	}
+	return nil
+}
+
+func (cn *Chain) ExtendHighestChain(b *block.Block) error {
+	pa := cn.HighestChain[len(cn.HighestChain)-1]
+	if b.Header.Height != pa.Header.Height+1 || b.Header.ParentHash != pa.Header.ComputeHash() {
+		return errors.New(errors.DataConsistencyError)
+	}
+	cn.HighestChain = append(cn.HighestChain, b)
+	return nil
+}

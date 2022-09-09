@@ -10,6 +10,7 @@ import (
 )
 
 const MaxExtraDataSize = 64
+const MAX_TXS_PER_BLOCK = 1000
 
 type BlockHeader struct {
 	//Hash            common.Hash

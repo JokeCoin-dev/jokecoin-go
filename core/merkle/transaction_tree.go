@@ -51,7 +51,7 @@ func buildTransactionTree1(TXs []block.Transaction) common.Hash {
 		a := TXs[0].ComputeHash()
 		hash := sha3.Sum256(a[:])
 		now := Node{LeftChild: EmptyTree, RightChild: EmptyTree, Parent: EmptyTree}
-		db.Put(hash[:], now.Encode(), nil)
+		db.Put(hash[:], now.Encode())
 		return hash
 	}
 	mid := (len(TXs) + 1) / 2
@@ -59,16 +59,16 @@ func buildTransactionTree1(TXs []block.Transaction) common.Hash {
 	rightChild := buildTransactionTree1(TXs[mid:])
 	hash := sha3.Sum256(append(leftChild[:], rightChild[:]...))
 	now := Node{LeftChild: leftChild, RightChild: rightChild, Parent: EmptyTree}
-	db.Put(hash[:], now.Encode(), nil)
+	db.Put(hash[:], now.Encode())
 	return hash
 }
 func buildTransactionTree2(now common.Hash, fa common.Hash) {
 	db := database.GetDB()
-	b, err := db.Get(now[:], nil)
+	b, err := db.Get(now[:])
 	utils.PanicIfErr(err)
 	n := DecodeNode(b)
 	n.Parent = fa
-	db.Put(now[:], n.Encode(), nil)
+	db.Put(now[:], n.Encode())
 	if n.LeftChild != EmptyTree {
 		buildTransactionTree2(n.LeftChild, now)
 		buildTransactionTree2(n.RightChild, now)

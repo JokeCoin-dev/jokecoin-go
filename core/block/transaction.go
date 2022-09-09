@@ -145,3 +145,16 @@ func ExecuteTransactions(txs []Transaction, state mpt.MerklePatriciaTrie) (mpt.M
 	}
 	return state, nil
 }
+
+func CreateCoinbaseTransaction(miner common.Address) Transaction {
+	tx := Transaction{
+		TxType:          2,
+		SenderPublicKey: common.EmptyPublicKey,
+		SenderSignature: common.EmptySignature,
+		Receiver:        miner,
+		Value:           COINBASE_VALUE,
+		Fee:             0,
+		Nonce:           0,
+	}
+	return tx
+}
